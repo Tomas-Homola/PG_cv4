@@ -23,20 +23,14 @@ private:
 
 	// cv3 stuff
 	QColor currentColor;
-	QVector<QPoint> polygonPoints;
+	QVector<QPoint> geometryPoints;
 	QPoint mousePosition[2];
 
 	bool drawingEnabled = false;
 
 	void infoMessage(QString message);
 	void warningMessage(QString message);
-	void drawPolygon(QVector<QPoint>& polygonPoints, QColor color);
-	void printPoints(QVector<QPoint>& polygonPoints);
-
-	void createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm);
-	void trimLine(QVector<QPoint>& currentLine);
-	void trimPolygon(QVector<QPoint>& polygonPoints);
-	void trim(QVector<QPoint>& polygonPoints);
+	void printPoints(QVector<QPoint> geometryPoints);
 
 
 	//ViewerWidget functions
@@ -83,8 +77,8 @@ private slots:
 
 	// cv3 slots
 	void on_pushButton_ColorDialog_clicked();
-	void on_pushButton_CreatePolygon_clicked();
-	void on_pushButton_ClearPolygon_clicked();
+	void on_pushButton_CreateGeometry_clicked();
+	void on_pushButton_ClearGeometry_clicked();
 
 	void on_pushButton_Rotate_clicked();
 	void on_pushButton_Shear_clicked();

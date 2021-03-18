@@ -12,10 +12,10 @@ private:
 	QRgb* data = nullptr;
 	QPainter* painter = nullptr;
 
-	// cv3 stuff
+	// cv5 stuff
 	void swapPoints(QPoint& point1, QPoint& point2);
 
-	// kreslenie Bresenham
+	// kreslenie
 	void drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color);
 	void drawBresenhamChosenY(QPoint point1, QPoint point2, QColor color);
 
@@ -24,10 +24,16 @@ public:
 	~ViewerWidget();
 	void resizeWidget(QSize size);
 
-	// cv3 funkcie
+	// funkcie na kreslenie
 	void drawLineDDA(QPoint point1, QPoint point2, QColor color);
 	void drawLineBresenham(QPoint point1, QPoint point2, QColor color);
 	void drawCircumference(QPoint point1, QPoint point2, QColor color);
+
+	void drawGeometry(QVector<QPoint>& geometryPoints, QColor color, int algorithm);
+	void createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm);
+	void trimLine(QVector<QPoint>& currentLine, QColor color, int algorithm);
+	void trimPolygon(QVector<QPoint>& polygonPoints, QColor color, int algorithm);
+	void trimGeometry(QVector<QPoint>& geometryPoints, QColor color, int algorithm);
 
 	//Image functions
 	bool setImage(const QImage& inputImg);
