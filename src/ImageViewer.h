@@ -22,7 +22,8 @@ private:
 
 
 	// cv3 stuff
-	QColor currentColor;
+	QColor currentPenColor;
+	QColor currentFillColor;
 	QVector<QPoint> geometryPoints;
 	QPoint mousePosition[2];
 
@@ -75,8 +76,10 @@ private slots:
 	void on_actionClear_triggered();
 	void on_actionSet_background_color_triggered();
 
-	// cv3 slots
-	void on_pushButton_ColorDialog_clicked();
+	// cv5 slots
+	void on_pushButton_PenColorDialog_clicked();
+	void on_pushButton_FillColorDialog_clicked();
+
 	void on_pushButton_CreateGeometry_clicked();
 	void on_pushButton_ClearGeometry_clicked();
 

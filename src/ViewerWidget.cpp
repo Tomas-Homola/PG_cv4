@@ -11,6 +11,107 @@ void ViewerWidget::swapPoints(QPoint& point1, QPoint& point2)
 	point2.setY(temp);
 }
 
+void ViewerWidget::printEdges(QVector<Edge> polygonEdges)
+{
+	qDebug() << "printing edges:";
+	for (int i = 0; i < polygonEdges.size(); i++)
+		qDebug() << "polygonEdges[" << i << "]:" << polygonEdges[i].startPoint << polygonEdges[i].endPoint << "deltaY:" << polygonEdges[i].deltaY << "x:" <<  polygonEdges[i].x << "w:" << polygonEdges[i].w;
+}
+void ViewerWidget::bubbleSortEdgesY(QVector<Edge>& polygonEdges)
+{
+	int i = 0, k = 0, n = polygonEdges.size();
+	Edge tempEdge;
+
+	// opisane z internetu
+	for (k = 0; k < n - 1; k++)
+	{
+		for (i = 0; i < (n - k - 1); i++)
+		{
+			if (polygonEdges[i] > polygonEdges[i + 1])
+			{
+				tempEdge = polygonEdges[i];
+				polygonEdges[i] = polygonEdges[i + 1];
+				polygonEdges[i + 1] = tempEdge;
+			}
+		}
+
+	}
+}
+void ViewerWidget::bubbleSortEdgesX(QList<Edge>& polygonEdges)
+{
+	int n = polygonEdges.size();
+	Edge tempEdge;
+
+	for (int k = 0; k < n - 1; k++)
+	{
+		for (int i = 0; i < (n - k - 1); i++)
+		{
+			if (polygonEdges[i].startPoint.x() > polygonEdges[i + 1].startPoint.x())
+			{
+				tempEdge = polygonEdges[i];
+				polygonEdges[i] = polygonEdges[i + 1];
+				polygonEdges[i + 1] = tempEdge;
+			}
+		}
+
+	}
+}
+void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges)
+{
+	polygonEdges.clear();
+	int size = polygonPoints.size();
+	int deltaY = 0, deltaX = 0;
+	double slope = 0.0;
+	Edge newEdge;
+
+	for (int i = 0; i < size; i++)
+	{
+		//https://stackoverflow.com/questions/61613618/how-can-i-iterate-over-the-vertices-of-a-polygon-and-compare-two-vertices-with-e
+		if (polygonPoints[(i + 1) % size].y() > polygonPoints[i].y())
+		{
+			newEdge.startPoint = polygonPoints[i];
+			newEdge.endPoint = polygonPoints[(i + 1) % size];
+		}
+		else if (polygonPoints[(i + 1) % size].y() < polygonPoints[i].y())
+		{
+			newEdge.startPoint = polygonPoints[(i + 1) % size];
+			newEdge.endPoint = polygonPoints[i];
+		}
+
+		deltaX = newEdge.endPoint.x() - newEdge.startPoint.x();
+		deltaY = newEdge.endPoint.y() - newEdge.startPoint.y();
+
+		if (deltaY == 0)
+		{
+			continue;
+		}
+
+		if (deltaY != 0)
+		{
+			if (deltaX == 0.0)
+			{
+				newEdge.w = 0.0;
+			}
+			else if (deltaX != 0 && deltaY != 0)
+			{
+				slope = static_cast<double>(deltaY) / static_cast<double>(deltaX);
+				newEdge.w = 1.0 / slope;
+			}
+
+			newEdge.endPoint.setY(newEdge.endPoint.y() - 1); // skratenie o 1 pixel
+			newEdge.deltaY = newEdge.endPoint.y() - newEdge.startPoint.y(); // deltaY
+			newEdge.x = static_cast<double>(newEdge.startPoint.x());
+
+			if (newEdge.deltaY != 0)
+			{
+				polygonEdges.push_back(newEdge);
+			}
+		}
+	}
+
+	bubbleSortEdgesY(polygonEdges);
+}
+
 void ViewerWidget::drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color)
 {
 	if (point1.x() > point2.x()) // ak sa klikol prvy bod viac vpravo
@@ -72,7 +173,6 @@ void ViewerWidget::drawBresenhamChosenX(QPoint point1, QPoint point2, QColor col
 		}
 	}
 }
-
 void ViewerWidget::drawBresenhamChosenY(QPoint point1, QPoint point2, QColor color)
 {
 	if (point1.y() > point2.y()) // ak sa klikol prvy bod nizsie ako druhy bod
@@ -136,6 +236,256 @@ void ViewerWidget::drawBresenhamChosenY(QPoint point1, QPoint point2, QColor col
 			setPixel(x, y, color);
 		}
 	}
+}
+void ViewerWidget::createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm)
+{
+	//qDebug() << "line drawn:" << point1 << point2;
+	if (algorithm == 0) // DDA
+	{
+		drawLineDDA(point1, point2, color);
+		//painter->drawText(point1, QString("(%1,%2)").arg(point1.x()).arg(point1.y()));
+		//painter->drawText(point2, QString("(%1,%2)").arg(point2.x()).arg(point2.y()));
+	}
+	else if (algorithm == 1) // mr. Bresenham
+	{
+
+		drawLineBresenham(point1, point2, color);
+		//painter->drawText(point1, QString("(%1,%2)").arg(point1.x()).arg(point1.y()));
+		//painter->drawText(point2, QString("(%1,%2)").arg(point2.x()).arg(point2.y()));
+	}
+	else
+		qDebug() << "Incorrect algorithm";
+}
+void ViewerWidget::drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int algorithm)
+{
+	if (geometryPoints.size() == 2) // usecka
+		createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(1), penColor, algorithm);
+	else if (geometryPoints.size() > 2) // polygon
+	{
+		for (int i = 1; i <= geometryPoints.size(); i++)
+		{
+			if (i == geometryPoints.size())
+				createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(i - 1), penColor, algorithm);
+			else
+				createLineWithAlgorithm(geometryPoints.at(i), geometryPoints.at(i - 1), penColor, algorithm);
+		}
+	}
+
+	fillPolygonScanLineAlgorithm(geometryPoints, fillColor);
+}
+void ViewerWidget::trimLine(QVector<QPoint> currentLine, QColor color, int algorithm)
+{
+	int imgHeight = getImgHeight();
+	int imgWidth = getImgWidth();
+	QPoint E[4]; // pole vrcholov obrazka
+	E[0] = QPoint(0, 0); E[3] = QPoint(imgWidth, 0);
+	E[1] = QPoint(0, imgHeight); E[2] = QPoint(imgWidth, imgHeight);
+	QPoint P1 = currentLine[0], P2 = currentLine[1];
+	QPoint newP1(0, 0), newP2(0, 0);
+	QVector<QPoint> newLine;
+	QPoint vectorD = P2 - P1, vectorW(0, 0), vectorE(0, 0), normalE(0, 0);
+	double tL = 0.0, tU = 1.0, t = 0.0;
+	int dotProductDN = 0, dotProductWN = 0;
+
+	bool areInside = false;
+	bool shouldTrim = false;
+
+	if ((P1.x() >= 0 && P1.x() <= imgWidth && P1.y() >= 0 && P1.y() <= imgHeight) || (P2.x() >= 0 && P2.x() <= imgWidth && P2.y() >= 0 && P2.y() <= imgHeight))
+		areInside = true;
+
+	//https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+	if (!areInside) // ci sa usecka nachadza v nejakom rohu tak, ze oba body su uz mimo, ale mala by sa este osekavat
+	{
+		int intersections = 0;
+		double s = 0.0, t = 0.0;
+		int denom = 0;
+		int upperS = 0;
+		int upperT = 0;
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (i == 3)
+				vectorE = E[0] - E[3];
+			else
+				vectorE = E[i + 1] - E[i];
+
+			denom = -vectorE.x() * vectorD.y() + vectorD.x() * vectorE.y();
+			upperS = -vectorD.y() * (P1.x() - E[i].x()) + vectorD.x() * (P1.y() - E[i].y());
+			upperT = vectorE.x() * (P1.y() - E[i].y()) - vectorE.y() * (P1.x() - E[i].x());
+			s = static_cast<double>(upperS) / denom;
+			t = static_cast<double>(upperT) / denom;
+
+			if (s >= 0.0 && s <= 1.0 && t >= 0 && t <= 1.0)
+				intersections++;
+		}
+
+		if (intersections != 2)
+			shouldTrim = false;
+		else
+			shouldTrim = true;
+	}
+
+	if (areInside || shouldTrim)
+	{
+		qDebug() << "trimming line";
+
+		for (int i = 0; i < 4; i++)
+		{
+			// direct vector hrany obrazka
+			if (i == 3)
+				vectorE = E[0] - E[3];
+			else
+				vectorE = E[i + 1] - E[i];
+
+			// z direct vectora spravime normalu: (x, y) -> (y, -x)
+			normalE.setX(vectorE.y()); normalE.setY(-vectorE.x());
+			vectorW = P1 - E[i];
+
+			// skalarne suciny
+			dotProductDN = QPoint::dotProduct(vectorD, normalE);
+			dotProductWN = QPoint::dotProduct(vectorW, normalE);
+
+			if (dotProductDN != 0)
+			{
+				t = static_cast<double>(-dotProductWN) / dotProductDN;
+
+				if (dotProductDN > 0 && t <= 1.0)
+					tL = std::max(t, tL);
+				else if (dotProductDN < 0 && t >= 0.0)
+					tU = std::min(t, tU);
+			}
+		}
+		qDebug() << "tL:" << tL << "\ttU:" << tU;
+		if (tL == 0.0 && tU == 1.0)
+			drawGeometry(currentLine, color, Qt::white, algorithm);
+		else if (tL < tU)
+		{
+			newP1.setX(static_cast<int>(P1.x() + ((double)P2.x() - P1.x()) * tL));
+			newP1.setY(static_cast<int>(P1.y() + ((double)P2.y() - P1.y()) * tL));
+
+			newP2.setX(static_cast<int>(P1.x() + ((double)P2.x() - P1.x()) * tU));
+			newP2.setY(static_cast<int>(P1.y() + ((double)P2.y() - P1.y()) * tU));
+
+			newLine.push_back(newP1); newLine.push_back(newP2);
+
+			drawGeometry(newLine, color, Qt::white, algorithm);
+		}
+	}
+	else
+		drawGeometry(currentLine, color, Qt::white, algorithm);
+}
+void ViewerWidget::trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int algorithm)
+{
+	//QVector<QPoint> V = polygonPoints; // kopia bodov
+	QVector<QPoint> W;
+	QPoint S(0, 0);
+	int xMin[4] = { 0,0, -getImgWidth() + 1, -getImgHeight() + 1 }; // poznamka pre autora: obrazok v poznamkach ku tymto hodnotam; z nejakeho dovodu ak tam nie je +1, to nekresli na spodnu hranu obrazka
+	int temp = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (V.size() != 0)
+			S = V[V.size() - 1];
+
+		for (int j = 0; j < V.size(); j++)
+		{
+			if (V.at(j).x() >= xMin[i])
+			{
+				if (S.x() >= xMin[i])
+					W.push_back(V[j]);
+				else
+				{
+					temp = static_cast<int>(S.y() + ((double)xMin[i] - S.x()) * ((double)V[j].y() - S.y()) / ((double)V[j].x() - S.x()) + 0.5);
+					W.push_back(QPoint(xMin[i], temp)); // priesecnik P
+					W.push_back(V[j]);
+				}
+			}
+			else
+			{
+				if (S.x() >= xMin[i])
+				{
+					temp = static_cast<int>(S.y() + ((double)xMin[i] - S.x()) * ((double)V[j].y() - S.y()) / ((double)V[j].x() - S.x()) + 0.5);
+					W.push_back(QPoint(xMin[i], temp)); // priesecnik P
+				}
+			}
+
+			S = V.at(j);
+		}
+
+		V.clear();
+
+		for (int k = 0; k < W.size(); k++)
+			V.push_back(QPoint(W[k].y(), -W[k].x()));
+
+		W.clear();
+	}
+	drawGeometry(V, penColor, fillColor, algorithm);
+}
+
+void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, QColor fillColor)
+{
+	QVector<Edge> polygonEdges;
+	QVector<QList<Edge>> TH;
+	QList<Edge> ZAH;
+	QVector<int> deleteZAH;
+	int yMin = 0, yMax = 0, y = 0;
+	int xStart = 0, xEnd = 0;
+	int index = 0;
+
+	setEdgesOfPolygon(polygonPoints, polygonEdges);
+
+	yMin = polygonEdges[0].startPoint.y();
+	yMax = polygonEdges[polygonEdges.size() - 1].endPoint.y();
+	y = yMin;
+
+	TH.resize(yMax - yMin + 2);
+
+	for (int i = 0; i < polygonEdges.size(); i++)
+	{
+		index = polygonEdges[i].startPoint.y() - yMin;
+		TH[index].push_back(polygonEdges[i]);
+	}
+
+	for (int i = 0; i < TH.size(); i++)
+	{
+		if (!TH[i].isEmpty())
+			for (int j = 0; j < TH[i].size(); j++)
+				ZAH.append(TH[i][j]);
+
+		bubbleSortEdgesX(ZAH);
+
+		for (int j = 0; j < ZAH.size(); j++)
+		{
+			if (j % 2 == 0)
+			{
+				if (static_cast<int>(ZAH[j].x) != static_cast<int>(ZAH[j + 1].x))
+				{
+					xStart = static_cast<int>(ZAH[j].x);
+					xEnd = static_cast<int>(ZAH[j + 1].x);
+
+					if (xEnd - xStart != 0)
+						for (int k = 1; k < (xEnd - xStart); k++)
+							setPixel(static_cast<int>(ZAH[j].x) + k, y, fillColor);
+				}
+			}
+			// ci treba vymazat danu hranu zo ZAH
+			if (ZAH[j].deltaY == 0)
+				deleteZAH.push_back(j);
+
+			// aktualizovanie hdonot
+			ZAH[j].deltaY -= 1;
+			ZAH[j].x += ZAH[j].w;
+			
+		}
+
+		for (int j = 0; j < deleteZAH.size(); j++)
+			ZAH.removeAt(deleteZAH[j] - j);
+
+		deleteZAH.clear();
+		y++;
+	}
+
+	update();
 }
 
 ViewerWidget::ViewerWidget(QString viewerName, QSize imgSize, QWidget* parent)
@@ -305,189 +655,12 @@ void ViewerWidget::drawCircumference(QPoint point1, QPoint point2, QColor color)
 	update();
 }
 
-void ViewerWidget::drawGeometry(QVector<QPoint>& geometryPoints, QColor color, int algorithm)
-{
-	if (geometryPoints.size() == 2) // usecka
-		createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(1), color, algorithm);
-	else if (geometryPoints.size() > 2) // polygon
-	{
-		for (int i = 1; i <= geometryPoints.size(); i++)
-		{
-			if (i == geometryPoints.size())
-				createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(i - 1), color, algorithm);
-			else
-				createLineWithAlgorithm(geometryPoints.at(i), geometryPoints.at(i - 1), color, algorithm);
-		}
-	}
-}
-
-void ViewerWidget::createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm)
-{
-	//qDebug() << "line drawn:" << point1 << point2;
-	if (algorithm == 0) // DDA
-		drawLineDDA(point1, point2, color);
-	else if (algorithm == 1) // mr. Bresenham
-		drawLineBresenham(point1, point2, color);
-	else
-		qDebug() << "Incorrect algorithm";
-}
-
-void ViewerWidget::trimLine(QVector<QPoint>& currentLine, QColor color, int algorithm)
-{
-	int imgHeight = getImgHeight();
-	int imgWidth = getImgWidth();
-	QPoint E[4]; // pole vrcholov obrazka
-	E[0] = QPoint(0, 0); E[3] = QPoint(imgWidth, 0);
-	E[1] = QPoint(0, imgHeight); E[2] = QPoint(imgWidth, imgHeight);
-	QPoint P1 = currentLine[0], P2 = currentLine[1];
-	QPoint newP1(0, 0), newP2(0, 0);
-	QVector<QPoint> newLine;
-	QPoint vectorD = P2 - P1, vectorW(0, 0), vectorE(0, 0), normalE(0, 0);
-	double tL = 0.0, tU = 1.0, t = 0.0;
-	int dotProductDN = 0, dotProductWN = 0;
-
-	bool areInside = false;
-	bool shouldTrim = false;
-
-	if ((P1.x() >= 0 && P1.x() <= imgWidth && P1.y() >= 0 && P1.y() <= imgHeight) || (P2.x() >= 0 && P2.x() <= imgWidth && P2.y() >= 0 && P2.y() <= imgHeight))
-		areInside = true;
-
-	//https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-	if (!areInside) // ci sa usecka nachadza v nejakom rohu tak, ze oba body su uz mimo, ale mala by sa este osekavat
-	{
-		int intersections = 0;
-		double s = 0.0, t = 0.0;
-		int denom = 0;
-		int upperS = 0;
-		int upperT = 0;
-
-		for (int i = 0; i < 4; i++)
-		{
-			if (i == 3)
-				vectorE = E[0] - E[3];
-			else
-				vectorE = E[i + 1] - E[i];
-
-			denom = -vectorE.x() * vectorD.y() + vectorD.x() * vectorE.y();
-			upperS = -vectorD.y() * (P1.x() - E[i].x()) + vectorD.x() * (P1.y() - E[i].y());
-			upperT = vectorE.x() * (P1.y() - E[i].y()) - vectorE.y() * (P1.x() - E[i].x());
-			s = static_cast<double>(upperS) / denom;
-			t = static_cast<double>(upperT) / denom;
-
-			if (s >= 0.0 && s <= 1.0 && t >= 0 && t <= 1.0)
-				intersections++;
-		}
-
-		if (intersections != 2)
-			shouldTrim = false;
-		else
-			shouldTrim = true;
-	}
-
-	if (areInside || shouldTrim)
-	{
-		qDebug() << "trimming line";
-
-		for (int i = 0; i < 4; i++)
-		{
-			// direct vector hrany obrazka
-			if (i == 3)
-				vectorE = E[0] - E[3];
-			else
-				vectorE = E[i + 1] - E[i];
-
-			// z direct vectora spravime normalu: (x, y) -> (y, -x)
-			normalE.setX(vectorE.y()); normalE.setY(-vectorE.x());
-			vectorW = P1 - E[i];
-
-			// skalarne suciny
-			dotProductDN = QPoint::dotProduct(vectorD, normalE);
-			dotProductWN = QPoint::dotProduct(vectorW, normalE);
-
-			if (dotProductDN != 0)
-			{
-				t = static_cast<double>(-dotProductWN) / dotProductDN;
-
-				if (dotProductDN > 0 && t <= 1.0)
-					tL = std::max(t, tL);
-				else if (dotProductDN < 0 && t >= 0.0)
-					tU = std::min(t, tU);
-			}
-		}
-		qDebug() << "tL:" << tL << "\ttU:" << tU;
-		if (tL == 0.0 && tU == 1.0)
-			drawGeometry(currentLine, color, algorithm);
-		else if (tL < tU)
-		{
-			newP1.setX(static_cast<int>(P1.x() + ((double)P2.x() - P1.x()) * tL));
-			newP1.setY(static_cast<int>(P1.y() + ((double)P2.y() - P1.y()) * tL));
-
-			newP2.setX(static_cast<int>(P1.x() + ((double)P2.x() - P1.x()) * tU));
-			newP2.setY(static_cast<int>(P1.y() + ((double)P2.y() - P1.y()) * tU));
-
-			newLine.push_back(newP1); newLine.push_back(newP2);
-
-			drawGeometry(newLine, color, algorithm);
-		}
-	}
-	else
-		drawGeometry(currentLine, color, algorithm);
-}
-
-void ViewerWidget::trimPolygon(QVector<QPoint>& polygonPoints, QColor color, int algorithm)
-{
-	QVector<QPoint> V = polygonPoints; // kopia bodov
-	QVector<QPoint> W;
-	QPoint S(0, 0);
-	int xMin[4] = { 0,0, -getImgWidth() + 1, -getImgHeight() + 1 }; // poznamka pre autora: obrazok v poznamkach ku tymto hodnotam; z nejakeho dovodu ak tam nie je +1, to nekresli na spodnu hranu obrazka
-	int temp = 0;
-
-	for (int i = 0; i < 4; i++)
-	{
-		if (V.size() != 0)
-			S = V[V.size() - 1];
-
-		for (int j = 0; j < V.size(); j++)
-		{
-			if (V.at(j).x() >= xMin[i])
-			{
-				if (S.x() >= xMin[i])
-					W.push_back(V[j]);
-				else
-				{
-					temp = static_cast<int>(S.y() + ((double)xMin[i] - S.x()) * ((double)V[j].y() - S.y()) / ((double)V[j].x() - S.x()) + 0.5);
-					W.push_back(QPoint(xMin[i], temp)); // priesecnik P
-					W.push_back(V[j]);
-				}
-			}
-			else
-			{
-				if (S.x() >= xMin[i])
-				{
-					temp = static_cast<int>(S.y() + ((double)xMin[i] - S.x()) * ((double)V[j].y() - S.y()) / ((double)V[j].x() - S.x()) + 0.5);
-					W.push_back(QPoint(xMin[i], temp)); // priesecnik P
-				}
-			}
-
-			S = V.at(j);
-		}
-
-		V.clear();
-
-		for (int k = 0; k < W.size(); k++)
-			V.push_back(QPoint(W[k].y(), -W[k].x()));
-
-		W.clear();
-	}
-	drawGeometry(V, color, algorithm);
-}
-
-void ViewerWidget::trimGeometry(QVector<QPoint>& geometryPoints, QColor color, int algorithm)
+void ViewerWidget::trimGeometry(QVector<QPoint>& geometryPoints, QColor penColor, QColor fillColor, int algorithm)
 {
 	if (geometryPoints.size() == 2)
-		trimLine(geometryPoints, color, algorithm);
+		trimLine(geometryPoints, penColor, algorithm);
 	else if (geometryPoints.size() > 2)
-		trimPolygon(geometryPoints, color, algorithm);
+		trimPolygon(geometryPoints, penColor, fillColor, algorithm);
 }
 
 //Slots

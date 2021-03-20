@@ -1,13 +1,16 @@
 #include "ImageViewer.h"
 
+// custom farby: cervena: #ED1C24; zelena: #00AD33; modra: #1F75FE
 
 ImageViewer::ImageViewer(QWidget* parent)
 	: QMainWindow(parent), ui(new Ui::ImageViewerClass)
 {
 	ui->setupUi(this);
 
-	ui->pushButton_ColorDialog->setStyleSheet("background-color:#000000");
-	currentColor = QColor("#000000");
+	currentPenColor = QColor("#000000");
+	currentFillColor = QColor("#1F75FE"); // custom modra farba
+	ui->pushButton_PenColorDialog->setStyleSheet("background-color:#000000");
+	ui->pushButton_FillColorDialog->setStyleSheet("background-color:#1F75FE");
 
 	openNewTabForImg(new ViewerWidget("Default window", QSize(800, 450)));
 	ui->tabWidget->setCurrentIndex(ui->tabWidget->count() - 1);
@@ -102,7 +105,7 @@ void ImageViewer::ViewerWidgetMouseButtonPress(ViewerWidget* w, QEvent* event)
 			geometryPoints.push_back(e->pos());
 			if (geometryPoints.size() > 1)
 			{
-				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(geometryPoints.size() - 1), geometryPoints.at(geometryPoints.size() - 2), currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(geometryPoints.size() - 1), geometryPoints.at(geometryPoints.size() - 2), currentPenColor, ui->comboBox_SelectAlgorithm->currentIndex());
 			}
 			printPoints(geometryPoints);
 
@@ -112,11 +115,11 @@ void ImageViewer::ViewerWidgetMouseButtonPress(ViewerWidget* w, QEvent* event)
 			if (geometryPoints.size() == 1) // kliknutie pravym hned po zadani prveho bodu
 			{
 				geometryPoints.push_back(e->pos());
-				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(1), geometryPoints.at(0), currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(1), geometryPoints.at(0), currentPenColor, ui->comboBox_SelectAlgorithm->currentIndex());
 			}
 			else if (geometryPoints.size() > 2) // ak by uz bola nakreslena usecka, tak sa znovu nenakresli
 			{
-				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(geometryPoints.size() - 1), geometryPoints.at(0), currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(geometryPoints.size() - 1), geometryPoints.at(0), currentPenColor, ui->comboBox_SelectAlgorithm->currentIndex());
 			}
 			
 			drawingEnabled = false;
@@ -152,7 +155,7 @@ void ImageViewer::ViewerWidgetMouseButtonRelease(ViewerWidget* w, QEvent* event)
 			}
 
 			getCurrentViewerWidget()->clear(); // vymazanie stareho polygonu
-			getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+			getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 		}
 		
 	}
@@ -163,7 +166,6 @@ void ImageViewer::ViewerWidgetMouseMove(ViewerWidget* w, QEvent* event)
 
 	if (e->buttons() == Qt::LeftButton && !drawingEnabled)
 	{
-		qDebug() << "mouse moved";
 		mousePosition[1] = e->pos();
 		int pX = mousePosition[1].x() - mousePosition[0].x();
 		int pY = mousePosition[1].y() - mousePosition[0].y();
@@ -175,7 +177,7 @@ void ImageViewer::ViewerWidgetMouseMove(ViewerWidget* w, QEvent* event)
 		}
 
 		getCurrentViewerWidget()->clear(); // vymazanie stareho polygonu
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 
 		mousePosition[0] = mousePosition[1];
 	}
@@ -209,7 +211,7 @@ void ImageViewer::ViewerWidgetWheel(ViewerWidget* w, QEvent* event)
 		}
 
 		getCurrentViewerWidget()->clear();
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 	}
 }
 
@@ -388,16 +390,29 @@ void ImageViewer::on_actionSet_background_color_triggered()
 	}
 }
 
-void ImageViewer::on_pushButton_ColorDialog_clicked()
+void ImageViewer::on_pushButton_PenColorDialog_clicked()
 {
-	QColor chosenColor = QColorDialog::getColor(currentColor.name(), this, "Select pen color");
+	QColor chosenColor = QColorDialog::getColor(currentPenColor.name(), this, "Select pen color");
 
 	if (chosenColor.isValid())
 	{
-		currentColor = chosenColor;
-		ui->pushButton_ColorDialog->setStyleSheet(QString("background-color:%1").arg(chosenColor.name()));
+		currentPenColor = chosenColor;
+		ui->pushButton_PenColorDialog->setStyleSheet(QString("background-color:%1").arg(chosenColor.name()));
 		
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	}
+}
+
+void ImageViewer::on_pushButton_FillColorDialog_clicked()
+{
+	QColor chosenColor = QColorDialog::getColor(currentPenColor.name(), this, "Select fill color");
+
+	if (chosenColor.isValid())
+	{
+		currentFillColor = chosenColor;
+		ui->pushButton_FillColorDialog->setStyleSheet(QString("background-color:%1").arg(chosenColor.name()));
+
+		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 	}
 }
 
@@ -456,7 +471,7 @@ void ImageViewer::on_pushButton_Rotate_clicked()
 	}
 
 	getCurrentViewerWidget()->clear();
-	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 }
 
 void ImageViewer::on_pushButton_Shear_clicked()
@@ -468,7 +483,7 @@ void ImageViewer::on_pushButton_Shear_clicked()
 		geometryPoints[i].setX(static_cast<int>(geometryPoints.at(i).x() + shearFactor * (geometryPoints.at(i).y() - sY)));
 
 	getCurrentViewerWidget()->clear();
-	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 }
 
 void ImageViewer::on_pushButton_Symmetry_clicked()
@@ -513,6 +528,6 @@ void ImageViewer::on_pushButton_Symmetry_clicked()
 	}
 
 	getCurrentViewerWidget()->clear();
-	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
 }
 

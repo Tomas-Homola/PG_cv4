@@ -3,6 +3,20 @@
 
 #define EPSILON 0.000000001;
 
+struct Edge
+{
+	QPoint startPoint;
+	QPoint endPoint;
+	int deltaY;
+	double x;
+	double w;
+
+	bool operator>(const Edge& edge) // courtesy of Alex Filip
+	{
+		return startPoint.y() > edge.startPoint.y();
+	}
+};
+
 class ViewerWidget :public QWidget {
 	Q_OBJECT
 private:
@@ -14,10 +28,20 @@ private:
 
 	// cv5 stuff
 	void swapPoints(QPoint& point1, QPoint& point2);
+	void printEdges(QVector<Edge> polygonEdges);
+
+	void bubbleSortEdgesY(QVector<Edge>& polygonEdges);
+	void bubbleSortEdgesX(QList<Edge>& polygonEdges);
+	void setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges);
 
 	// kreslenie
 	void drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color);
 	void drawBresenhamChosenY(QPoint point1, QPoint point2, QColor color);
+	
+	void drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int algorithm);
+	void trimLine(QVector<QPoint> currentLine, QColor color, int algorithm);
+	void trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int algorithm);
+	void fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, QColor fillColor);
 
 public:
 	ViewerWidget(QString viewerName, QSize imgSize, QWidget* parent = Q_NULLPTR);
@@ -27,13 +51,10 @@ public:
 	// funkcie na kreslenie
 	void drawLineDDA(QPoint point1, QPoint point2, QColor color);
 	void drawLineBresenham(QPoint point1, QPoint point2, QColor color);
+	void createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm);
 	void drawCircumference(QPoint point1, QPoint point2, QColor color);
 
-	void drawGeometry(QVector<QPoint>& geometryPoints, QColor color, int algorithm);
-	void createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm);
-	void trimLine(QVector<QPoint>& currentLine, QColor color, int algorithm);
-	void trimPolygon(QVector<QPoint>& polygonPoints, QColor color, int algorithm);
-	void trimGeometry(QVector<QPoint>& geometryPoints, QColor color, int algorithm);
+	void trimGeometry(QVector<QPoint>& geometryPoints, QColor color, QColor fillColor, int algorithm);
 
 	//Image functions
 	bool setImage(const QImage& inputImg);
