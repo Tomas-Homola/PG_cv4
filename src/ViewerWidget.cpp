@@ -17,6 +17,12 @@ void ViewerWidget::printEdges(QVector<Edge> polygonEdges)
 	for (int i = 0; i < polygonEdges.size(); i++)
 		qDebug() << "polygonEdges[" << i << "]:" << polygonEdges[i].startPoint << polygonEdges[i].endPoint << "deltaY:" << polygonEdges[i].deltaY << "x:" <<  polygonEdges[i].x << "w:" << polygonEdges[i].w;
 }
+void ViewerWidget::printPoints(QVector<QPoint> polygonPoints)
+{
+	qDebug() << "printing points:";
+	for (int i = 0; i < polygonPoints.size(); i++)
+		qDebug() << "point[" << i << "]: (" << polygonPoints[i].x() << ", " << polygonPoints[i].y() << ")";
+}
 void ViewerWidget::bubbleSortEdgesY(QVector<Edge>& polygonEdges)
 {
 	int i = 0, k = 0, n = polygonEdges.size();
@@ -126,19 +132,50 @@ void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge
 	//printEdges(polygonEdges);
 }
 
+// vypocet farby pixela
 QColor ViewerWidget::getNearestNeighborColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
 {
-	QColor color("#000000");
+	QColor defaultColor("#000000");
+	int d0 = 0, d1 = 0, d2 = 0;
 
+	d0 = std::sqrt((trianglePoints[0].x() - currentPoint.x()) * (trianglePoints[0].x() - currentPoint.x()) + (trianglePoints[0].y() - currentPoint.y()) * (trianglePoints[0].y() - currentPoint.y()));
+	d1 = std::sqrt((trianglePoints[1].x() - currentPoint.x()) * (trianglePoints[1].x() - currentPoint.x()) + (trianglePoints[1].y() - currentPoint.y()) * (trianglePoints[1].y() - currentPoint.y()));
+	d2 = std::sqrt((trianglePoints[2].x() - currentPoint.x()) * (trianglePoints[2].x() - currentPoint.x()) + (trianglePoints[2].y() - currentPoint.y()) * (trianglePoints[2].y() - currentPoint.y()));
 
-	return color;
+	if (d0 <= d1 && d0 <= d2)
+		return defaultColor0;
+	else if (d1 <= d0 && d1 <= d2)
+		return defaultColor1;
+	else if (d2 <= d0 && d2 <= d1)
+		return defaultColor2;
+	else
+		return defaultColor;
 }
-QColor ViewerWidget::getBarycentricColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
+QColor ViewerWidget::getBarycentricColor(QVector<QPoint> T, QPoint P)
 {
-	QColor color("#000000");
+	// tu uz sa mi nechcelo pisat dlhe nazvy premennych
+	QColor outputColor("#000000");
+	int red = 0, green = 0, blue = 0;
+	double d1 = 0.0, d2 = 0.0, d3 = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0;
 
+	// trochu iny sposob tejto interpolacie: https://codeplea.com/triangular-interpolation
+	d1 = std::sqrt((T[0].x() - P.x()) * (T[0].x() - P.x()) + (T[0].y() - P.y()) * (T[0].y() - P.y()));
+	d2 = std::sqrt((T[1].x() - P.x()) * (T[1].x() - P.x()) + (T[1].y() - P.y()) * (T[1].y() - P.y()));
+	d3 = std::sqrt((T[2].x() - P.x()) * (T[2].x() - P.x()) + (T[2].y() - P.y()) * (T[2].y() - P.y()));
 
-	return color;
+	w1 = 1.0 / d1;
+	w2 = 1.0 / d2;
+	w3 = 1.0 / d3;
+
+	red = (w1 * defaultColor0.red() + w2 * defaultColor1.red() + w3 * defaultColor2.red()) / (w1 + w2 + w3);
+	green = (w1 * defaultColor0.green() + w2 * defaultColor1.green() + w3 * defaultColor2.green()) / (w1 + w2 + w3);
+	blue = (w1 * defaultColor0.blue() + w2 * defaultColor1.blue() + w3 * defaultColor2.blue()) / (w1 + w2 + w3);
+
+	outputColor.setRed(red);
+	outputColor.setGreen(green);
+	outputColor.setBlue(blue);
+
+	return outputColor;
 }
 
 void ViewerWidget::drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color)
@@ -277,7 +314,6 @@ void ViewerWidget::createLineWithAlgorithm(QPoint point1, QPoint point2, QColor 
 	}
 	else if (lineAlgorithm == 1) // mr. Bresenham
 	{
-
 		drawLineBresenham(point1, point2, color);
 		//painter->drawText(point1, QString("(%1,%2)").arg(point1.x()).arg(point1.y()));
 		//painter->drawText(point2, QString("(%1,%2)").arg(point2.x()).arg(point2.y()));
@@ -291,11 +327,13 @@ void ViewerWidget::drawGeometry(QVector<QPoint> geometryPoints, QColor penColor,
 		createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(1), penColor, lineAlgorithm);
 	else if (geometryPoints.size() > 2) // polygon alebo trojuholnik
 	{
+		// vyfarbenie
 		if (geometryPoints.size() == 3)
 			fillTriangleScanLine(geometryPoints, interpolationMethod);
 		else
 			fillPolygonScanLineAlgorithm(geometryPoints, fillColor);
 
+		// hranice polygonu
 		for (int i = 1; i <= geometryPoints.size(); i++)
 		{
 			if (i == geometryPoints.size())
@@ -524,13 +562,16 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 }
 void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMethod)
 {
-	qDebug() << "triangle scanLine";
+	//qDebug() << "triangle scanLine";
 	QPoint P(-1, -1);
 	QPoint e1[2], e2[2], e3[2], e4[2];
 	double m = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0, w4 = 0.0, x1 = 0.0, x2 = 0.0;
-	int y = 0, yMax = 0, deltaX = 0;
+	int y = 0, yMax = 0, deltaX = 0; int Px = 0;
 
+	//printPoints(T);
+	//qDebug() << "sorting";
 	bubbleSortTrianglePoints(T);
+	//printPoints(T);
 
 	if (T[0].y() == T[1].y()) // vlastne spodny trojuholnik -> vodorovna strana je hore
 	{
@@ -545,8 +586,10 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 	else // trojuholnik treba rozdelit na 2 casti
 	{
 		m = ((double)T[2].y() - (double)T[0].y()) / ((double)T[2].x() - (double)T[0].x());
+		Px = static_cast<int>((((double)T[1].y() - (double)T[0].y()) / m) + T[0].x() + 0.5);
 
-		P.setX(((double)T[1].y() - (double)T[0].y()) / m); P.setY(T[1].y());
+		P.setX(Px); P.setY(T[1].y());
+		painter->drawText(P, QString("(%1, %2)").arg(P.x()).arg(P.y()));
 
 		if (T[1].x() < P.x()) // deliaci bod P je vpravo
 		{
@@ -583,7 +626,7 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 		w3 = 1.0 / m;
 		// smernica a obratena smernica hrany e2
 		m = ((double)e4[1].y() - (double)e4[0].y()) / ((double)e4[1].x() - (double)e4[0].x());
-		w3 = 1.0 / m;
+		w4 = 1.0 / m;
 	}
 
 	y = e1[0].y(); // zaciatocny bod usecky e1 -> y suradnica
@@ -595,16 +638,12 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 		deltaX = static_cast<int>(x2) - static_cast<int>(x1);
 		
 		//if ((x1 - x2) > 0.000000001)
-			for (int i = 1; i < (x2 - x1); i++)
+			for (int i = 1; i < deltaX; i++)
 			{
-				/*if (interpolationMethod == NearestNeighbor)
-					setPixel(x1 + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
-				else if (interpolationMethod == Barycentric)
-					setPixel(x1 + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));*/
 				if (interpolationMethod == NearestNeighbor)
-					setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+					setPixel(static_cast<int>(x1) + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
 				else if (interpolationMethod == Barycentric)
-					setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+					setPixel(static_cast<int>(x1) + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));
 			}
 
 		x1 += w1; x2 += w2;
@@ -624,14 +663,10 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 			//if ((x1 - x2) > 0.000000001)
 				for (int i = 1; i < deltaX; i++)
 				{
-					/*if (interpolationMethod == NearestNeighbor)
-						setPixel(x1 + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
-					else if (interpolationMethod == Barycentric)
-						setPixel(x1 + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));*/
 					if (interpolationMethod == NearestNeighbor)
-						setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+						setPixel(static_cast<int>(x1) + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
 					else if (interpolationMethod == Barycentric)
-						setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+						setPixel(static_cast<int>(x1) + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));
 				}
 
 			x1 += w3; x2 += w4;

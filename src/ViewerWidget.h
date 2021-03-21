@@ -31,25 +31,29 @@ private:
 	QRgb* data = nullptr;
 	QPainter* painter = nullptr;
 
-	QColor defaultColors[3] = { QColor("#ED1C24"), QColor("#00AD33"), QColor("#1F75FE") };
+	//QColor defaultColors[3] = { QColor("#ED1C24"), QColor("#00AD33"), QColor("#1F75FE") };
+	QColor defaultColor0 = QColor("#ED1C24");
+	QColor defaultColor1 = QColor("#00AD33");
+	QColor defaultColor2 = QColor("#1F75FE");
+
 
 	// cv5 stuff
 	void swapPoints(QPoint& point1, QPoint& point2); // prehodenie 2 bodov
 	void printEdges(QVector<Edge> polygonEdges); // vypisat hrany polygonu
+	void printPoints(QVector<QPoint> polygonPoints);
 
 	void bubbleSortEdgesY(QVector<Edge>& polygonEdges); // usporiadanie hran podla y
 	void bubbleSortEdgesX(QVector<Edge>& polygonEdges); // usporiadnanie hran podla x
-	void bubbleSortTrianglePoints(QVector<QPoint>& trianglePoints);
+	void bubbleSortTrianglePoints(QVector<QPoint>& trianglePoints); // usporiadanie bodov trojuholnika
 	void setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges); // vytvorenie hran pre polygon
 
-	// vypocet farby pixela
+	// vypocet farby pixela pre trojuholnik
 	QColor getNearestNeighborColor(QVector<QPoint> trianglePoints, QPoint currentPoint);
-	QColor getBarycentricColor(QVector<QPoint> trianglePoints, QPoint currentPoint);
+	QColor getBarycentricColor(QVector<QPoint> T, QPoint P);
 
 	// kreslenie
 	void drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color);
 	void drawBresenhamChosenY(QPoint point1, QPoint point2, QColor color);
-	
 	void drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod);
 	void trimLine(QVector<QPoint> currentLine, QColor color, int lineAlgorithm);
 	void trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod);

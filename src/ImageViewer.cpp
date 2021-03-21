@@ -538,3 +538,9 @@ void ImageViewer::on_pushButton_Symmetry_clicked()
 	getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 }
 
+void ImageViewer::on_comboBox_InterpolationMethod_currentIndexChanged(int index)
+{
+	getCurrentViewerWidget()->clear();
+	getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
+}
+

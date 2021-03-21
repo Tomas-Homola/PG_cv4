@@ -86,4 +86,6 @@ private slots:
 	void on_pushButton_Rotate_clicked();
 	void on_pushButton_Shear_clicked();
 	void on_pushButton_Symmetry_clicked();
+
+	void on_comboBox_InterpolationMethod_currentIndexChanged(int index);
 };
