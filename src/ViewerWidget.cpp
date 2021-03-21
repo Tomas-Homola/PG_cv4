@@ -128,11 +128,17 @@ void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge
 
 QColor ViewerWidget::getNearestNeighborColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
 {
-	return QColor();
+	QColor color("#000000");
+
+
+	return color;
 }
 QColor ViewerWidget::getBarycentricColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
 {
-	return QColor();
+	QColor color("#000000");
+
+
+	return color;
 }
 
 void ViewerWidget::drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color)
@@ -457,19 +463,19 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 	int xStart = 0, xEnd = 0;
 	int index = 0;
 
-	setEdgesOfPolygon(polygonPoints, polygonEdges);
+	setEdgesOfPolygon(polygonPoints, polygonEdges); // vytvorenie hran polygonu
 
-	yMin = polygonEdges[0].startPoint.y();
+	yMin = polygonEdges[0].startPoint.y(); // minimalna hdonota y
 
-	for (int i = 0; i < polygonEdges.size(); i++)
+	for (int i = 0; i < polygonEdges.size(); i++) // yMax si treba zistit takto, nie tak, ako je to v pdf, ze to je z poslednej hrany y-hodnota endPointu -> nie vzdy to plati
 		if (polygonEdges[i].endPoint.y() > yMax)
 			yMax = polygonEdges[i].endPoint.y();
 
 	y = yMin;
 
-	TH.resize(yMax - yMin + 2);
+	TH.resize(yMax - yMin + 1); // ked tam nebolo trochu vacsie, padalo to pri orezavani
 
-	for (int i = 0; i < polygonEdges.size(); i++)
+	for (int i = 0; i < polygonEdges.size(); i++) // priprava TH
 	{
 		index = polygonEdges[i].startPoint.y() - yMin;
 		TH[index].push_back(polygonEdges[i]);
@@ -478,12 +484,12 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 	for (int i = 0; i < TH.size(); i++)
 	{
 		if (!TH[i].isEmpty())
-			for (int j = 0; j < TH[i].size(); j++)
+			for (int j = 0; j < TH[i].size(); j++) // priradenie hran z TH do ZAH
 				ZAH.append(TH[i][j]);
 
-		bubbleSortEdgesX(ZAH);
+		bubbleSortEdgesX(ZAH); // usporiadanie ZAH podla x
 
-		for (int j = 0; j < ZAH.size(); j++)
+		for (int j = 0; j < ZAH.size(); j++) // po dvojiciach prechadzanie cez ZAH
 		{
 			if (j % 2 == 0)
 			{
@@ -507,7 +513,7 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 			
 		}
 
-		for (int j = 0; j < deleteZAH.size(); j++)
+		for (int j = 0; j < deleteZAH.size(); j++) // vymazanie hran s deltaY = 0 zo ZAH
 			ZAH.removeAt(deleteZAH[j] - j);
 
 		deleteZAH.clear();
@@ -518,29 +524,119 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 }
 void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMethod)
 {
-	QPoint P;
-	QPoint e1[2], e2[2];
-	double m = 0.0, w1 = 0.0, w2 = 0.0;
-	int x = 0;
-
+	qDebug() << "triangle scanLine";
+	QPoint P(-1, -1);
+	QPoint e1[2], e2[2], e3[2], e4[2];
+	double m = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0, w4 = 0.0, x1 = 0.0, x2 = 0.0;
+	int y = 0, yMax = 0, deltaX = 0;
 
 	bubbleSortTrianglePoints(T);
 
 	if (T[0].y() == T[1].y()) // vlastne spodny trojuholnik -> vodorovna strana je hore
 	{
-		e1[0] = T[0]; e1[1] = T[2];
-		e2[0] = T[1]; e2[1] = T[2];
+		e1[0] = T[0]; e1[1] = T[2]; // lava hrana
+		e2[0] = T[1]; e2[1] = T[2]; // prava hrana
 	}
-	else if (T[1].y() == T[2].y()) // vlastne hory trojuholnik -> vodorovna strana je dole
+	else if (T[1].y() == T[2].y()) // vlastne horny trojuholnik -> vodorovna strana je dole
 	{
-		e1[0] = T[0]; e1[1] = T[1];
-		e2[0] = T[0]; e2[1] = T[2];
+		e1[0] = T[0]; e1[1] = T[1]; // lava hrana
+		e2[0] = T[0]; e2[1] = T[2]; // prava hrana
 	}
-	else
+	else // trojuholnik treba rozdelit na 2 casti
 	{
-		m = (double)(T[2].y() - T[0].y()) / (double)(T[2].x() - T[0].x());
+		m = ((double)T[2].y() - (double)T[0].y()) / ((double)T[2].x() - (double)T[0].x());
 
-		P.setX((double)(T[1].y() - T[0].y()) / m); P.setY(T[1].y());
+		P.setX(((double)T[1].y() - (double)T[0].y()) / m); P.setY(T[1].y());
+
+		if (T[1].x() < P.x()) // deliaci bod P je vpravo
+		{
+			// vrchna cast
+			e1[0] = T[0]; e1[1] = T[1];
+			e2[0] = T[0]; e2[1] = P;
+
+			// spodna cast
+			e3[0] = T[1]; e3[1] = T[2];
+			e4[0] = P; e4[1] = T[2];
+		}
+		else if (T[1].x() > P.x()) // deliaci bod P je nalavo
+		{
+			// vrchna cast
+			e1[0] = T[0]; e1[1] = P;
+			e2[0] = T[0]; e2[1] = T[1];
+
+			// spodna cast
+			e3[0] = P; e3[1] = T[2];
+			e4[0] = T[1]; e4[1] = T[2];
+		}
+	}
+
+	// smernica a obratena smernica hrany e1
+	m = ((double)e1[1].y() - (double)e1[0].y()) / ((double)e1[1].x() - (double)e1[0].x());
+	w1 = 1.0 / m;
+	// smernica a obratena smernica hrany e2
+	m = ((double)e2[1].y() - (double)e2[0].y()) / ((double)e2[1].x() - (double)e2[0].x());
+	w2 = 1.0 / m;
+
+	if (P != QPoint(-1, -1)) // ak sa trojuholnik delil, tak sa vypocitaju obratene smernice pre spodnu cast
+	{
+		m = ((double)e3[1].y() - (double)e3[0].y()) / ((double)e3[1].x() - (double)e3[0].x());
+		w3 = 1.0 / m;
+		// smernica a obratena smernica hrany e2
+		m = ((double)e4[1].y() - (double)e4[0].y()) / ((double)e4[1].x() - (double)e4[0].x());
+		w3 = 1.0 / m;
+	}
+
+	y = e1[0].y(); // zaciatocny bod usecky e1 -> y suradnica
+	yMax = e1[1].y(); // koncovy bod usecky e1 -> y suradnica
+	x1 = (double)e1[0].x(); x2 = (double)e2[0].x();
+
+	while (y < yMax)
+	{
+		deltaX = static_cast<int>(x2) - static_cast<int>(x1);
+		
+		//if ((x1 - x2) > 0.000000001)
+			for (int i = 1; i < (x2 - x1); i++)
+			{
+				/*if (interpolationMethod == NearestNeighbor)
+					setPixel(x1 + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
+				else if (interpolationMethod == Barycentric)
+					setPixel(x1 + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));*/
+				if (interpolationMethod == NearestNeighbor)
+					setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+				else if (interpolationMethod == Barycentric)
+					setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+			}
+
+		x1 += w1; x2 += w2;
+		y++;
+	}
+
+	if (P != QPoint(-1, -1)) // ak sa rozdeloval trojuhlnik, tak sa vyfarbi aj spodna cast
+	{
+		y = e3[0].y();
+		yMax = e3[1].y();
+		x1 = (double)e3[0].x(); x2 = (double)e4[0].x();
+
+		while (y < yMax)
+		{
+			deltaX = static_cast<int>(x2) - static_cast<int>(x1);
+
+			//if ((x1 - x2) > 0.000000001)
+				for (int i = 1; i < deltaX; i++)
+				{
+					/*if (interpolationMethod == NearestNeighbor)
+						setPixel(x1 + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
+					else if (interpolationMethod == Barycentric)
+						setPixel(x1 + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));*/
+					if (interpolationMethod == NearestNeighbor)
+						setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+					else if (interpolationMethod == Barycentric)
+						setPixel(static_cast<int>(x1 + i), y, 255, 0, 0);
+				}
+
+			x1 += w3; x2 += w4;
+			y++;
+		}
 	}
 }
 
