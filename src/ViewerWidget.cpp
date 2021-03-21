@@ -37,7 +37,7 @@ void ViewerWidget::bubbleSortEdgesY(QVector<Edge>& polygonEdges)
 
 	}
 }
-void ViewerWidget::bubbleSortEdgesX(QList<Edge>& polygonEdges)
+void ViewerWidget::bubbleSortEdgesX(QVector<Edge>& polygonEdges)
 {
 	int n = polygonEdges.size();
 	Edge tempEdge;
@@ -56,9 +56,30 @@ void ViewerWidget::bubbleSortEdgesX(QList<Edge>& polygonEdges)
 
 	}
 }
+void ViewerWidget::bubbleSortTrianglePoints(QVector<QPoint>& trianglePoints)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3 - i - 1; j++)
+		{
+			if (trianglePoints[j].y() > trianglePoints[j + 1].y())
+				swapPoints(trianglePoints[j], trianglePoints[j + 1]);
+		}
+	}
+
+	if (trianglePoints[0].y() == trianglePoints[1].y())
+	{
+		if (trianglePoints[0].x() > trianglePoints[1].x())
+			swapPoints(trianglePoints[0], trianglePoints[1]);
+	}
+	else if (trianglePoints[1].y() == trianglePoints[2].y())
+	{
+		if (trianglePoints[1].x() > trianglePoints[2].x())
+			swapPoints(trianglePoints[1], trianglePoints[2]);
+	}
+}
 void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges)
 {
-	polygonEdges.clear();
 	int size = polygonPoints.size();
 	int deltaY = 0, deltaX = 0;
 	double slope = 0.0;
@@ -72,7 +93,7 @@ void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge
 			newEdge.startPoint = polygonPoints[i];
 			newEdge.endPoint = polygonPoints[(i + 1) % size];
 		}
-		else if (polygonPoints[(i + 1) % size].y() < polygonPoints[i].y())
+		else
 		{
 			newEdge.startPoint = polygonPoints[(i + 1) % size];
 			newEdge.endPoint = polygonPoints[i];
@@ -81,35 +102,37 @@ void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge
 		deltaX = newEdge.endPoint.x() - newEdge.startPoint.x();
 		deltaY = newEdge.endPoint.y() - newEdge.startPoint.y();
 
-		if (deltaY == 0)
-		{
-			continue;
-		}
-
 		if (deltaY != 0)
 		{
-			if (deltaX == 0.0)
-			{
+			if (deltaX == 0)
 				newEdge.w = 0.0;
-			}
-			else if (deltaX != 0 && deltaY != 0)
+			else
 			{
-				slope = static_cast<double>(deltaY) / static_cast<double>(deltaX);
+				slope = (double)deltaY / (double)deltaX;
 				newEdge.w = 1.0 / slope;
 			}
 
-			newEdge.endPoint.setY(newEdge.endPoint.y() - 1); // skratenie o 1 pixel
-			newEdge.deltaY = newEdge.endPoint.y() - newEdge.startPoint.y(); // deltaY
-			newEdge.x = static_cast<double>(newEdge.startPoint.x());
+			newEdge.endPoint.setY(newEdge.endPoint.y() - 1);
+			newEdge.deltaY = newEdge.endPoint.y() - newEdge.startPoint.y();
+			newEdge.x = (double)newEdge.startPoint.x();
 
-			if (newEdge.deltaY != 0)
-			{
-				polygonEdges.push_back(newEdge);
-			}
+			polygonEdges.push_back(newEdge);
 		}
 	}
 
+	//printEdges(polygonEdges);
 	bubbleSortEdgesY(polygonEdges);
+	//printEdges(polygonEdges);
+}
+
+QColor ViewerWidget::getNearestNeighborColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
+{
+	return QColor();
+}
+
+QColor ViewerWidget::getBarycentricColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
+{
+	return QColor();
 }
 
 void ViewerWidget::drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color)
@@ -237,16 +260,16 @@ void ViewerWidget::drawBresenhamChosenY(QPoint point1, QPoint point2, QColor col
 		}
 	}
 }
-void ViewerWidget::createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm)
+void ViewerWidget::createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int lineAlgorithm)
 {
 	//qDebug() << "line drawn:" << point1 << point2;
-	if (algorithm == 0) // DDA
+	if (lineAlgorithm == 0) // DDA
 	{
 		drawLineDDA(point1, point2, color);
 		//painter->drawText(point1, QString("(%1,%2)").arg(point1.x()).arg(point1.y()));
 		//painter->drawText(point2, QString("(%1,%2)").arg(point2.x()).arg(point2.y()));
 	}
-	else if (algorithm == 1) // mr. Bresenham
+	else if (lineAlgorithm == 1) // mr. Bresenham
 	{
 
 		drawLineBresenham(point1, point2, color);
@@ -254,26 +277,29 @@ void ViewerWidget::createLineWithAlgorithm(QPoint point1, QPoint point2, QColor 
 		//painter->drawText(point2, QString("(%1,%2)").arg(point2.x()).arg(point2.y()));
 	}
 	else
-		qDebug() << "Incorrect algorithm";
+		qDebug() << "Incorrect lineAlgorithm";
 }
-void ViewerWidget::drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int algorithm)
+void ViewerWidget::drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod)
 {
 	if (geometryPoints.size() == 2) // usecka
-		createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(1), penColor, algorithm);
-	else if (geometryPoints.size() > 2) // polygon
+		createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(1), penColor, lineAlgorithm);
+	else if (geometryPoints.size() > 2) // polygon alebo trojuholnik
 	{
+		if (geometryPoints.size() == 3)
+			fillTriangleScanLine(geometryPoints, interpolationMethod);
+		else
+			fillPolygonScanLineAlgorithm(geometryPoints, fillColor);
+
 		for (int i = 1; i <= geometryPoints.size(); i++)
 		{
 			if (i == geometryPoints.size())
-				createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(i - 1), penColor, algorithm);
+				createLineWithAlgorithm(geometryPoints.at(0), geometryPoints.at(i - 1), penColor, lineAlgorithm);
 			else
-				createLineWithAlgorithm(geometryPoints.at(i), geometryPoints.at(i - 1), penColor, algorithm);
+				createLineWithAlgorithm(geometryPoints.at(i), geometryPoints.at(i - 1), penColor, lineAlgorithm);
 		}
 	}
-
-	fillPolygonScanLineAlgorithm(geometryPoints, fillColor);
 }
-void ViewerWidget::trimLine(QVector<QPoint> currentLine, QColor color, int algorithm)
+void ViewerWidget::trimLine(QVector<QPoint> currentLine, QColor color, int lineAlgorithm)
 {
 	int imgHeight = getImgHeight();
 	int imgWidth = getImgWidth();
@@ -357,7 +383,7 @@ void ViewerWidget::trimLine(QVector<QPoint> currentLine, QColor color, int algor
 		}
 		qDebug() << "tL:" << tL << "\ttU:" << tU;
 		if (tL == 0.0 && tU == 1.0)
-			drawGeometry(currentLine, color, Qt::white, algorithm);
+			drawGeometry(currentLine, color, Qt::white, lineAlgorithm, 0);
 		else if (tL < tU)
 		{
 			newP1.setX(static_cast<int>(P1.x() + ((double)P2.x() - P1.x()) * tL));
@@ -368,13 +394,13 @@ void ViewerWidget::trimLine(QVector<QPoint> currentLine, QColor color, int algor
 
 			newLine.push_back(newP1); newLine.push_back(newP2);
 
-			drawGeometry(newLine, color, Qt::white, algorithm);
+			drawGeometry(newLine, color, Qt::white, lineAlgorithm, 0);
 		}
 	}
 	else
-		drawGeometry(currentLine, color, Qt::white, algorithm);
+		drawGeometry(currentLine, color, Qt::white, lineAlgorithm, 0);
 }
-void ViewerWidget::trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int algorithm)
+void ViewerWidget::trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod)
 {
 	//QVector<QPoint> V = polygonPoints; // kopia bodov
 	QVector<QPoint> W;
@@ -419,14 +445,13 @@ void ViewerWidget::trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillCo
 
 		W.clear();
 	}
-	drawGeometry(V, penColor, fillColor, algorithm);
+	drawGeometry(V, penColor, fillColor, lineAlgorithm, interpolationMethod);
 }
-
 void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, QColor fillColor)
 {
 	QVector<Edge> polygonEdges;
-	QVector<QList<Edge>> TH;
-	QList<Edge> ZAH;
+	QVector<QVector<Edge>> TH;
+	QVector<Edge> ZAH;
 	QVector<int> deleteZAH;
 	int yMin = 0, yMax = 0, y = 0;
 	int xStart = 0, xEnd = 0;
@@ -464,7 +489,7 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 					xEnd = static_cast<int>(ZAH[j + 1].x);
 
 					if (xEnd - xStart != 0)
-						for (int k = 1; k < (xEnd - xStart); k++)
+						for (int k = 1; k <= (xEnd - xStart); k++)
 							setPixel(static_cast<int>(ZAH[j].x) + k, y, fillColor);
 				}
 			}
@@ -486,6 +511,31 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 	}
 
 	update();
+}
+void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMethod)
+{
+	QPoint P;
+	QPoint e1[2], e2[2];
+	double m = 0.0, w1 = 0.0, w2 = 0.0;
+	int x = 0;
+
+
+	bubbleSortTrianglePoints(T);
+
+	if (T[0].y() == T[1].y()) // vlastne spodny trojuholnik -> vodorovna strana je hore
+	{
+		e1[0] = T[0]; e1[1] = T[2];
+		e2[0] = T[1]; e2[1] = T[2];
+	}
+	else if (T[1].y() == T[2].y()) // vlastne hory trojuholnik -> vodorovna strana je dole
+	{
+		e1[0] = T[0]; e1[1] = T[1];
+		e2[0] = T[0]; e2[1] = T[2];
+	}
+	else
+	{
+		m = (trianglePToints[) / ();
+	}
 }
 
 ViewerWidget::ViewerWidget(QString viewerName, QSize imgSize, QWidget* parent)
@@ -655,12 +705,12 @@ void ViewerWidget::drawCircumference(QPoint point1, QPoint point2, QColor color)
 	update();
 }
 
-void ViewerWidget::trimGeometry(QVector<QPoint>& geometryPoints, QColor penColor, QColor fillColor, int algorithm)
+void ViewerWidget::createGeometry(QVector<QPoint>& geometryPoints, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod)
 {
 	if (geometryPoints.size() == 2)
-		trimLine(geometryPoints, penColor, algorithm);
+		trimLine(geometryPoints, penColor, lineAlgorithm);
 	else if (geometryPoints.size() > 2)
-		trimPolygon(geometryPoints, penColor, fillColor, algorithm);
+		trimPolygon(geometryPoints, penColor, fillColor, lineAlgorithm, interpolationMethod);
 }
 
 //Slots

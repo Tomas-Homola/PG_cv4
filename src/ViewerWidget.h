@@ -17,6 +17,11 @@ struct Edge
 	}
 };
 
+enum interpolation
+{
+	NearestNeighbor = 0, Barycentric = 1
+};
+
 class ViewerWidget :public QWidget {
 	Q_OBJECT
 private:
@@ -26,22 +31,30 @@ private:
 	QRgb* data = nullptr;
 	QPainter* painter = nullptr;
 
-	// cv5 stuff
-	void swapPoints(QPoint& point1, QPoint& point2);
-	void printEdges(QVector<Edge> polygonEdges);
+	QColor defaultColors[3] = { QColor("#ED1C24"), QColor("#00AD33"), QColor("#1F75FE") };
 
-	void bubbleSortEdgesY(QVector<Edge>& polygonEdges);
-	void bubbleSortEdgesX(QList<Edge>& polygonEdges);
-	void setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges);
+	// cv5 stuff
+	void swapPoints(QPoint& point1, QPoint& point2); // prehodenie 2 bodov
+	void printEdges(QVector<Edge> polygonEdges); // vypisat hrany polygonu
+
+	void bubbleSortEdgesY(QVector<Edge>& polygonEdges); // usporiadanie hran podla y
+	void bubbleSortEdgesX(QVector<Edge>& polygonEdges); // usporiadnanie hran podla x
+	void bubbleSortTrianglePoints(QVector<QPoint>& trianglePoints);
+	void setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges); // vytvorenie hran pre polygon
+
+	// vypocet farby pixela
+	QColor getNearestNeighborColor(QVector<QPoint> trianglePoints, QPoint currentPoint);
+	QColor getBarycentricColor(QVector<QPoint> trianglePoints, QPoint currentPoint);
 
 	// kreslenie
 	void drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color);
 	void drawBresenhamChosenY(QPoint point1, QPoint point2, QColor color);
 	
-	void drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int algorithm);
-	void trimLine(QVector<QPoint> currentLine, QColor color, int algorithm);
-	void trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int algorithm);
+	void drawGeometry(QVector<QPoint> geometryPoints, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod);
+	void trimLine(QVector<QPoint> currentLine, QColor color, int lineAlgorithm);
+	void trimPolygon(QVector<QPoint> V, QColor penColor, QColor fillColor, int lineAlgorithm, int interpolationMethod);
 	void fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, QColor fillColor);
+	void fillTriangleScanLine(QVector<QPoint> T, int interpolationMethod);
 
 public:
 	ViewerWidget(QString viewerName, QSize imgSize, QWidget* parent = Q_NULLPTR);
@@ -51,10 +64,10 @@ public:
 	// funkcie na kreslenie
 	void drawLineDDA(QPoint point1, QPoint point2, QColor color);
 	void drawLineBresenham(QPoint point1, QPoint point2, QColor color);
-	void createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int algorithm);
+	void createLineWithAlgorithm(QPoint point1, QPoint point2, QColor color, int lineAlgorithm);
 	void drawCircumference(QPoint point1, QPoint point2, QColor color);
 
-	void trimGeometry(QVector<QPoint>& geometryPoints, QColor color, QColor fillColor, int algorithm);
+	void createGeometry(QVector<QPoint>& geometryPoints, QColor color, QColor fillColor, int lineAlgorithm, int interpolationMethod);
 
 	//Image functions
 	bool setImage(const QImage& inputImg);

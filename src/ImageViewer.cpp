@@ -17,6 +17,7 @@ ImageViewer::ImageViewer(QWidget* parent)
 
 	ui->pushButton_ClearGeometry->setEnabled(false);
 	ui->groupBox_Transformations->setEnabled(false);
+	ui->comboBox_InterpolationMethod->setEnabled(false);
 }
 
 void ImageViewer::infoMessage(QString message)
@@ -107,7 +108,7 @@ void ImageViewer::ViewerWidgetMouseButtonPress(ViewerWidget* w, QEvent* event)
 			{
 				getCurrentViewerWidget()->createLineWithAlgorithm(geometryPoints.at(geometryPoints.size() - 1), geometryPoints.at(geometryPoints.size() - 2), currentPenColor, ui->comboBox_SelectAlgorithm->currentIndex());
 			}
-			printPoints(geometryPoints);
+			//printPoints(geometryPoints);
 
 		}
 		else if (e->button() == Qt::RightButton) // ukoncenie kreslenia
@@ -125,7 +126,12 @@ void ImageViewer::ViewerWidgetMouseButtonPress(ViewerWidget* w, QEvent* event)
 			drawingEnabled = false;
 			ui->groupBox_Transformations->setEnabled(true);
 
-			printPoints(geometryPoints);
+			if (geometryPoints.size() == 3)
+				ui->comboBox_InterpolationMethod->setEnabled(true);
+
+			getCurrentViewerWidget()->clear();
+			getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
+			//printPoints(geometryPoints);
 		}
 	}
 	else // nejde sa kreslit, ale posuvat polygon
@@ -155,7 +161,7 @@ void ImageViewer::ViewerWidgetMouseButtonRelease(ViewerWidget* w, QEvent* event)
 			}
 
 			getCurrentViewerWidget()->clear(); // vymazanie stareho polygonu
-			getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+			getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 		}
 		
 	}
@@ -177,7 +183,7 @@ void ImageViewer::ViewerWidgetMouseMove(ViewerWidget* w, QEvent* event)
 		}
 
 		getCurrentViewerWidget()->clear(); // vymazanie stareho polygonu
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 
 		mousePosition[0] = mousePosition[1];
 	}
@@ -211,7 +217,7 @@ void ImageViewer::ViewerWidgetWheel(ViewerWidget* w, QEvent* event)
 		}
 
 		getCurrentViewerWidget()->clear();
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 	}
 }
 
@@ -399,7 +405,7 @@ void ImageViewer::on_pushButton_PenColorDialog_clicked()
 		currentPenColor = chosenColor;
 		ui->pushButton_PenColorDialog->setStyleSheet(QString("background-color:%1").arg(chosenColor.name()));
 		
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 	}
 }
 
@@ -412,7 +418,7 @@ void ImageViewer::on_pushButton_FillColorDialog_clicked()
 		currentFillColor = chosenColor;
 		ui->pushButton_FillColorDialog->setStyleSheet(QString("background-color:%1").arg(chosenColor.name()));
 
-		getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+		getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 	}
 }
 
@@ -429,6 +435,7 @@ void ImageViewer::on_pushButton_ClearGeometry_clicked()
 	ui->pushButton_ClearGeometry->setEnabled(false);
 	ui->pushButton_CreateGeometry->setEnabled(true);
 	ui->groupBox_Transformations->setEnabled(false);
+	ui->comboBox_InterpolationMethod->setEnabled(false);
 
 	drawingEnabled = false;
 	geometryPoints.clear();
@@ -471,7 +478,7 @@ void ImageViewer::on_pushButton_Rotate_clicked()
 	}
 
 	getCurrentViewerWidget()->clear();
-	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 }
 
 void ImageViewer::on_pushButton_Shear_clicked()
@@ -483,7 +490,7 @@ void ImageViewer::on_pushButton_Shear_clicked()
 		geometryPoints[i].setX(static_cast<int>(geometryPoints.at(i).x() + shearFactor * (geometryPoints.at(i).y() - sY)));
 
 	getCurrentViewerWidget()->clear();
-	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 }
 
 void ImageViewer::on_pushButton_Symmetry_clicked()
@@ -528,6 +535,6 @@ void ImageViewer::on_pushButton_Symmetry_clicked()
 	}
 
 	getCurrentViewerWidget()->clear();
-	getCurrentViewerWidget()->trimGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex());
+	getCurrentViewerWidget()->createGeometry(geometryPoints, currentPenColor, currentFillColor, ui->comboBox_SelectAlgorithm->currentIndex(), ui->comboBox_InterpolationMethod->currentIndex());
 }
 
