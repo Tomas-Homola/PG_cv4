@@ -46,7 +46,7 @@ void ViewerWidget::bubbleSortEdgesX(QVector<Edge>& polygonEdges)
 	{
 		for (int i = 0; i < (n - k - 1); i++)
 		{
-			if (polygonEdges[i].startPoint.x() > polygonEdges[i + 1].startPoint.x())
+			if (polygonEdges[i].x > polygonEdges[i + 1].x)
 			{
 				tempEdge = polygonEdges[i];
 				polygonEdges[i] = polygonEdges[i + 1];
@@ -80,6 +80,7 @@ void ViewerWidget::bubbleSortTrianglePoints(QVector<QPoint>& trianglePoints)
 }
 void ViewerWidget::setEdgesOfPolygon(QVector<QPoint> polygonPoints, QVector<Edge>& polygonEdges)
 {
+	polygonEdges.clear();
 	int size = polygonPoints.size();
 	int deltaY = 0, deltaX = 0;
 	double slope = 0.0;
@@ -129,7 +130,6 @@ QColor ViewerWidget::getNearestNeighborColor(QVector<QPoint> trianglePoints, QPo
 {
 	return QColor();
 }
-
 QColor ViewerWidget::getBarycentricColor(QVector<QPoint> trianglePoints, QPoint currentPoint)
 {
 	return QColor();
@@ -460,7 +460,11 @@ void ViewerWidget::fillPolygonScanLineAlgorithm(QVector<QPoint> polygonPoints, Q
 	setEdgesOfPolygon(polygonPoints, polygonEdges);
 
 	yMin = polygonEdges[0].startPoint.y();
-	yMax = polygonEdges[polygonEdges.size() - 1].endPoint.y();
+
+	for (int i = 0; i < polygonEdges.size(); i++)
+		if (polygonEdges[i].endPoint.y() > yMax)
+			yMax = polygonEdges[i].endPoint.y();
+
 	y = yMin;
 
 	TH.resize(yMax - yMin + 2);
@@ -534,7 +538,9 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 	}
 	else
 	{
-		m = (trianglePToints[) / ();
+		m = (double)(T[2].y() - T[0].y()) / (double)(T[2].x() - T[0].x());
+
+		P.setX((double)(T[1].y() - T[0].y()) / m); P.setY(T[1].y());
 	}
 }
 
