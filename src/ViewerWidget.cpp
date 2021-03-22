@@ -156,6 +156,38 @@ QColor ViewerWidget::getBarycentricColor(QVector<QPoint> T, QPoint P)
 	// tu uz sa mi nechcelo pisat dlhe nazvy premennych
 	QColor outputColor("#000000");
 	int red = 0, green = 0, blue = 0;
+	double w1 = 0.0, w2 = 0.0, w3 = 0.0;
+	double lambda0 = 0.0, lambda1 = 0.0, lambda2 = 0.0;
+
+	/*w1 = (((double)T[1].y() - (double)T[2].y()) * ((double)P.x() - (double)T[2].x()) + ((double)T[2].x() - (double)T[1].x()) * ((double)P.y() - (double)T[2].y())) / (((double)T[1].y() - (double)T[2].y()) * ((double)T[0].x() - (double)T[2].x()) + ((double)T[2].x() - (double)T[1].x()) * ((double)T[0].y() - (double)T[2].y()));
+	w2 = (((double)T[2].y() - (double)T[0].y()) * ((double)P.x() - (double)T[2].x()) + ((double)T[0].x() - (double)T[2].x()) * ((double)P.y() - (double)T[2].y())) / (((double)T[1].y() - (double)T[2].y()) * ((double)T[0].x() - (double)T[2].x()) + ((double)T[2].x() - (double)T[1].x()) * ((double)T[0].y() - (double)T[2].y()));
+	w3 = 1.0 - w1 - w2;
+	
+	red = static_cast<int>(w1 * defaultColor0.red() + w2 * defaultColor1.red() + w3 * defaultColor2.red());
+	green = static_cast<int>(w1 * defaultColor0.green() + w2 * defaultColor1.green() + w3 * defaultColor2.green());
+	blue = static_cast<int>(w1 * defaultColor0.blue() + w2 * defaultColor1.blue() + w3 * defaultColor2.blue());*/
+
+	lambda0 = qAbs(((double)T[1].x() - (double)P.x())*((double)T[2].y() - (double)P.y()) - ((double)T[1].y() - (double)P.y())*((double)T[2].x() - (double)P.x())) / qAbs(((double)T[1].x() - (double)T[0].x()) * ((double)T[2].y() - (double)T[0].y()) - ((double)T[1].y() - (double)T[0].y()) * ((double)T[2].x() - T[0].x()));
+	
+	lambda1 = qAbs(((double)T[0].x() - (double)P.x()) * ((double)T[2].y() - (double)P.y()) - ((double)T[0].y() - (double)P.y()) * ((double)T[2].x() - (double)P.x())) / qAbs(((double)T[1].x() - (double)T[0].x()) * ((double)T[2].y() - (double)T[0].y()) - ((double)T[1].y() - (double)T[0].y()) * ((double)T[2].x() - T[0].x()));
+
+	lambda2 = 1.0 - lambda0 - lambda1;
+
+	red = static_cast<int>(lambda0 * defaultColor0.red() + lambda1 * defaultColor1.red() + lambda2 * defaultColor2.red());
+	green = static_cast<int>(lambda0 * defaultColor0.green() + lambda1 * defaultColor1.green() + lambda2 * defaultColor2.green());
+	blue = static_cast<int>(lambda0 * defaultColor0.blue() + lambda1 * defaultColor1.blue() + lambda2 * defaultColor2.blue());
+
+	outputColor.setRed(red);
+	outputColor.setGreen(green);
+	outputColor.setBlue(blue);
+
+	return outputColor;
+}
+QColor ViewerWidget::getBarycentricDistanceColor(QVector<QPoint> T, QPoint P)
+{
+	// tu uz sa mi nechcelo pisat dlhe nazvy premennych
+	QColor outputColor("#000000");
+	int red = 0, green = 0, blue = 0;
 	double d1 = 0.0, d2 = 0.0, d3 = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0;
 
 	// trochu iny sposob tejto interpolacie: https://codeplea.com/triangular-interpolation
@@ -589,7 +621,6 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 		Px = static_cast<int>((((double)T[1].y() - (double)T[0].y()) / m) + T[0].x() + 0.5);
 
 		P.setX(Px); P.setY(T[1].y());
-		painter->drawText(P, QString("(%1, %2)").arg(P.x()).arg(P.y()));
 
 		if (T[1].x() < P.x()) // deliaci bod P je vpravo
 		{
@@ -638,12 +669,14 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 		deltaX = static_cast<int>(x2) - static_cast<int>(x1);
 		
 		//if ((x1 - x2) > 0.000000001)
-			for (int i = 1; i < deltaX; i++)
+			for (int i = 1; i <= deltaX; i++)
 			{
 				if (interpolationMethod == NearestNeighbor)
 					setPixel(static_cast<int>(x1) + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
-				else if (interpolationMethod == Barycentric)
+				else if (interpolationMethod == Barycentric1)
 					setPixel(static_cast<int>(x1) + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));
+				else if (interpolationMethod == Barycentric2)
+					setPixel(static_cast<int>(x1) + i, y, getBarycentricDistanceColor(T, QPoint(static_cast<int>(x1) + i, y)));
 			}
 
 		x1 += w1; x2 += w2;
@@ -661,12 +694,14 @@ void ViewerWidget::fillTriangleScanLine(QVector<QPoint> T, int interpolationMeth
 			deltaX = static_cast<int>(x2) - static_cast<int>(x1);
 
 			//if ((x1 - x2) > 0.000000001)
-				for (int i = 1; i < deltaX; i++)
+				for (int i = 1; i <= deltaX; i++)
 				{
 					if (interpolationMethod == NearestNeighbor)
 						setPixel(static_cast<int>(x1) + i, y, getNearestNeighborColor(T, QPoint(static_cast<int>(x1) + i, y)));
-					else if (interpolationMethod == Barycentric)
+					else if (interpolationMethod == Barycentric1)
 						setPixel(static_cast<int>(x1) + i, y, getBarycentricColor(T, QPoint(static_cast<int>(x1) + i, y)));
+					else if (interpolationMethod == Barycentric2)
+						setPixel(static_cast<int>(x1) + i, y, getBarycentricDistanceColor(T, QPoint(static_cast<int>(x1) + i, y)));
 				}
 
 			x1 += w3; x2 += w4;

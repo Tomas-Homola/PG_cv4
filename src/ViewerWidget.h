@@ -19,7 +19,7 @@ struct Edge
 
 enum interpolation
 {
-	NearestNeighbor = 0, Barycentric = 1
+	NearestNeighbor = 0, Barycentric1 = 1, Barycentric2 = 2
 };
 
 class ViewerWidget :public QWidget {
@@ -31,11 +31,12 @@ private:
 	QRgb* data = nullptr;
 	QPainter* painter = nullptr;
 
-	//QColor defaultColors[3] = { QColor("#ED1C24"), QColor("#00AD33"), QColor("#1F75FE") };
 	QColor defaultColor0 = QColor("#ED1C24");
 	QColor defaultColor1 = QColor("#00AD33");
 	QColor defaultColor2 = QColor("#1F75FE");
-
+	//QColor defaultColor0 = QColor("#FF0000");
+	//QColor defaultColor1 = QColor("#00FF00");
+	//QColor defaultColor2 = QColor("#0000FF");
 
 	// cv5 stuff
 	void swapPoints(QPoint& point1, QPoint& point2); // prehodenie 2 bodov
@@ -50,6 +51,7 @@ private:
 	// vypocet farby pixela pre trojuholnik
 	QColor getNearestNeighborColor(QVector<QPoint> trianglePoints, QPoint currentPoint);
 	QColor getBarycentricColor(QVector<QPoint> T, QPoint P);
+	QColor getBarycentricDistanceColor(QVector<QPoint> T, QPoint P);
 
 	// kreslenie
 	void drawBresenhamChosenX(QPoint point1, QPoint point2, QColor color);
