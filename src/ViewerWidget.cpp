@@ -190,7 +190,7 @@ QColor ViewerWidget::getBarycentricDistanceColor(QVector<QPoint> T, QPoint P)
 	int red = 0, green = 0, blue = 0;
 	double d1 = 0.0, d2 = 0.0, d3 = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0;
 
-	// trochu iny sposob tejto interpolacie: https://codeplea.com/triangular-interpolation
+	// trochu iny sposob interpolacie: https://codeplea.com/triangular-interpolation
 	d1 = std::sqrt((T[0].x() - P.x()) * (T[0].x() - P.x()) + (T[0].y() - P.y()) * (T[0].y() - P.y()));
 	d2 = std::sqrt((T[1].x() - P.x()) * (T[1].x() - P.x()) + (T[1].y() - P.y()) * (T[1].y() - P.y()));
 	d3 = std::sqrt((T[2].x() - P.x()) * (T[2].x() - P.x()) + (T[2].y() - P.y()) * (T[2].y() - P.y()));
@@ -199,9 +199,9 @@ QColor ViewerWidget::getBarycentricDistanceColor(QVector<QPoint> T, QPoint P)
 	w2 = 1.0 / d2;
 	w3 = 1.0 / d3;
 
-	red = (w1 * defaultColor0.red() + w2 * defaultColor1.red() + w3 * defaultColor2.red()) / (w1 + w2 + w3);
-	green = (w1 * defaultColor0.green() + w2 * defaultColor1.green() + w3 * defaultColor2.green()) / (w1 + w2 + w3);
-	blue = (w1 * defaultColor0.blue() + w2 * defaultColor1.blue() + w3 * defaultColor2.blue()) / (w1 + w2 + w3);
+	red = static_cast<int>((w1 * defaultColor0.red() + w2 * defaultColor1.red() + w3 * defaultColor2.red()) / (w1 + w2 + w3));
+	green = static_cast<int>((w1 * defaultColor0.green() + w2 * defaultColor1.green() + w3 * defaultColor2.green()) / (w1 + w2 + w3));
+	blue = static_cast<int>((w1 * defaultColor0.blue() + w2 * defaultColor1.blue() + w3 * defaultColor2.blue()) / (w1 + w2 + w3));
 
 	outputColor.setRed(red);
 	outputColor.setGreen(green);
